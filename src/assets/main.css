@@ -1,0 +1,15 @@
+:root {
+  --white: #fff;
+  --black: #000;
+  --lg: linear-gradient(333deg, rgba(34,193,195,1) 0%, rgba(224,45,253,1) 100%)
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  position: relative;
+  font-weight: normal;
+  color: var(--white);
+}
