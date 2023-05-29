@@ -49,30 +49,14 @@
 </template>
 
 <script setup>
-import MapPin from "@/components/icons/MapPin.vue";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, reactive, ref} from "vue";
 import $api from "@/api/index.js";
+import MapPin from "@/components/icons/MapPin.vue";
 import TempIcon from "@/components/icons/TempIcon.vue";
 import DropLet from "@/components/icons/DropLet.vue";
 import WindIcon from "@/components/icons/WindIcon.vue";
 import CompassIcon from "@/components/icons/CompassIcon.vue";
 
-const getCoords = async () => {
- await navigator.geolocation.getCurrentPosition(
-      position => {
-        lat.value = position.coords.latitude;
-        lon.value = position.coords.longitude;
-      },
-      error => {
-        console.log(error.message);
-      },
-  );
-  console.log(lat.value, lon.value);
-}
-
-
-const lat = ref('');
-const lon = ref('');
 const country = ref('');
 const region = ref('');
 const tempC = ref('');
@@ -85,76 +69,14 @@ const minTemp = ref('');
 const icon = ref('');
 const week = ref('');
 const date = ref('');
-const loading = ref(false)
+const loading = ref(false);
 
-// const getReg =  () => {
-//    $api.get(`/current.json?q=${lat.value}%20${lon.value}&`)
-//       .then((response) => (region.value = response.data.location.region))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (country.value = response.data.location.country))
-//       .catch((error) => (console.log(error)))
-// }
-//
-// const getInfo =  () => {
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (tempC.value = response.data.current.temp_c))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (text.value = response.data.current.condition.text))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (humidity.value = response.data.current.humidity))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (wind.value = response.data.current.wind_kph))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (windDir.value = response.data.current.wind_dir))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/current.json?q=${region.value}&`)
-//       .then((response) => (icon.value = response.data.current.condition.icon))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/forecast.json?q=${region.value}&days=6`)
-//       .then((response) => (date.value = response.data.forecast.forecastday[0].date))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/forecast.json?q=${region.value}&days=6`)
-//       .then((response) => (week.value = response.data.forecast.forecastday))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/forecast.json?q=${region.value}&days=1`)
-//       .then((response) => (maxTemp.value = response.data.forecast.forecastday[0].day.maxtemp_c))
-//       .catch((error) => (console.log(error)))
-//    $api.get(`/forecast.json?q=${region.value}&days=1`)
-//       .then((response) => (minTemp.value = response.data.forecast.forecastday[0].day.mintemp_c))
-//       .catch((error) => (console.log(error)))
-// }
+const coords = reactive({
+  latitude: 0,
+  longitude: 0
+})
 
-// const getCoords = async () => {
-//   try {
-//     const response = await navigator.geolocation.getCurrentPosition
-//     // lat.value = response.data.position.coords.latitude
-//     // lon.value = response.data.position.coords.longitude
-//     // console.log(lat.value, lon.value)
-//     console.log(response)
-//   } catch (e) {
-//     console.log(e)
-//   }
-// }
-
-const getReg = async () => {
-  try {
-
-  } catch (e) {
-
-  }
-}
-const getInfo = async () => {
-  try {
-
-  } catch (e) {
-
-  }
-}
+const error = ref(null);
 
 const trunc = computed(() => (temp) => {
   return Math.trunc(temp)
@@ -168,18 +90,67 @@ const dateNow = computed(() => (date = new Date(), locale = `en-US`) => {
   return date.toLocaleDateString(locale, {weekday: 'long', month: 'long', day: "numeric", year: "numeric"})
 })
 
-// const loader = () => {
-//   setTimeout(() => {
-//     loading.value = false;
-//   }, 1000);
-// }
+const getCoords = () => {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+          coords.latitude = position.coords.latitude;
+          coords.longitude = position.coords.longitude;
+          resolve();
+        },
+        (err) => {
+          error.value = err.message;
+          reject(err);
+        }
+    );
+  });
+};
+
+const getReg = async () => {
+  try {
+    const currentRegion = await $api.get(`/current.json?q=${coords.latitude}%20${coords.longitude}`);
+    const currentCountry = await $api.get(`/current.json?q=${currentRegion.data.location.country}&`);
+    country.value = currentCountry.data.location.country;
+    region.value = currentRegion.data.location.region;
+  } catch (error) {
+    error.value = error;
+  }
+}
+
+const getInfo = async () => {
+  try {
+    const current = await $api.get(`/current.json?q=${region.value}&`);
+    const sixthDay = await $api.get(`/forecast.json?q=${region.value}&days=6`);
+    const firstDay = await $api.get(`/forecast.json?q=${region.value}&days=1`);
+
+    tempC.value = current.data.current.temp_c;
+    text.value = current.data.current.condition.text;
+    humidity.value = current.data.current.humidity;
+    wind.value = current.data.current.wind_kph;
+    windDir.value = current.data.current.wind_dir;
+    icon.value = current.data.current.condition.icon;
+
+    date.value = sixthDay.data.forecast.forecastday[0].date;
+    week.value = sixthDay.data.forecast.forecastday;
+    maxTemp.value = firstDay.data.forecast.forecastday[0].day.maxtemp_c;
+    minTemp.value = firstDay.data.forecast.forecastday[0].day.mintemp_c;
+  } catch (error) {
+    error.value = error;
+  }
+}
 
 onMounted(async () => {
-  await getCoords()
-  // await getReg()
-  // await getInfo()
-  // loading.value = false
-})
+  try {
+    loading.value = true;
+    await getCoords();
+    await getReg();
+    await getInfo();
+    loading.value = false;
+  } catch (error) {
+    error.value = error;
+    console.log(error.value);
+  }
+});
 </script>
 
 <style scoped>
