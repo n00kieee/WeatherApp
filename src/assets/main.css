@@ -1,15 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch&display=swap');
+
 :root {
-  --white: #fff;
-  --black: #000;
-  --lg: linear-gradient(333deg, rgba(34,193,195,1) 0%, rgba(224,45,253,1) 100%)
+    --body: #343d4b;
+    --white: #fff;
+    --black: #000;
+    --gradient: linear-gradient( 135deg, #439598 10%, #31319b 100%);
 }
 
 *,
 *::before,
 *::after {
-  box-sizing: border-box;
-  margin: 0;
-  position: relative;
-  font-weight: normal;
-  color: var(--white);
+    box-sizing: border-box;
+    margin: 0;
+    position: relative;
+    font-weight: normal;
+    color: var(--white);
+}
+
+body {
+    font-family: 'Chakra Petch', sans-serif;
+    background-color: var(--body);
 }

@@ -1,6 +1,7 @@
 <template>
   <div class="container">
     <div class="weather-card">
+      <div class="card-gradient"></div>
       <transition name="fade" v-if="loading">
         <div class="loader">
           <div class="loading"></div>
@@ -8,21 +9,23 @@
       </transition>
       <span class="location">
         <MapPin class="pin"/>
-        {{ region }}, {{ country }}</span>
+       {{ city }} {{ region }}, {{ country }}</span>
       <div class="info-container">
         <div class="temperature">
-          <span class="deg"><TempIcon/>{{ tempC }}°</span>
+          <span class="deg">{{ tempC }}°</span>
           <span class="max-temp">max. {{ trunc(maxTemp) }}° </span>
           <span class="min-temp">min. {{ trunc(minTemp) }}°</span>
         </div>
         <div class="icon-weather">
-          <img :src="icon" :alt="text" class="icon">
+          <svg>
+            <IconsWeather :text="text"/>
+          </svg>
         </div>
         <div class="desc">
           <span class="text">{{ text }}</span>
           <div class="weather-info">
             <span class="water"><DropLet/>{{ humidity }}%</span>
-            <span class="wind"><WindIcon/>{{ trunc(wind) }} km/h</span>
+            <span class="wind"><WindIcon/>{{ trunc(wind) }}km/h</span>
             <span class="compass"><CompassIcon/>{{ windDir }}</span>
           </div>
         </div>
@@ -37,13 +40,14 @@
                v-for="days in week"
                :key="days"
           >
-            <img :src="days.day.condition.icon" alt="">
-            <span class="week-deg">+{{ trunc(days.day.maxtemp_c) }}</span>
+            <svg>
+              <IconsWeather :text="days.day.condition.text"/>
+            </svg>
+            <span class="week-deg">{{ trunc(days.day.maxtemp_c) }}°</span>
             <span class="week-day">{{ dayOfWeek(new Date(`${days.date}`)) }}</span>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </template>
@@ -51,14 +55,15 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from "vue";
 import $api from "@/api/index.js";
-import MapPin from "@/components/icons/MapPin.vue";
-import TempIcon from "@/components/icons/TempIcon.vue";
-import DropLet from "@/components/icons/DropLet.vue";
-import WindIcon from "@/components/icons/WindIcon.vue";
-import CompassIcon from "@/components/icons/CompassIcon.vue";
+import MapPin from "@/components/images/icons/MapPin.vue";
+import DropLet from "@/components/images/icons/DropLet.vue";
+import WindIcon from "@/components/images/icons/WindIcon.vue";
+import CompassIcon from "@/components/images/icons/CompassIcon.vue";
+import IconsWeather from "@/components/IconsWeather.vue";
 
 const country = ref('');
 const region = ref('');
+const city = ref('');
 const tempC = ref('');
 const text = ref('');
 const humidity = ref('');
@@ -112,6 +117,7 @@ const getReg = async () => {
     const currentCountry = await $api.get(`/current.json?q=${currentRegion.data.location.country}&`);
     country.value = currentCountry.data.location.country;
     region.value = currentRegion.data.location.region;
+    city.value = currentRegion.data.location.name
   } catch (error) {
     error.value = error;
   }
@@ -120,7 +126,7 @@ const getReg = async () => {
 const getInfo = async () => {
   try {
     const current = await $api.get(`/current.json?q=${region.value}&`);
-    const sixthDay = await $api.get(`/forecast.json?q=${region.value}&days=6`);
+    const futureDay = await $api.get(`/forecast.json?q=${region.value}&days=3`);
     const firstDay = await $api.get(`/forecast.json?q=${region.value}&days=1`);
 
     tempC.value = current.data.current.temp_c;
@@ -129,9 +135,8 @@ const getInfo = async () => {
     wind.value = current.data.current.wind_kph;
     windDir.value = current.data.current.wind_dir;
     icon.value = current.data.current.condition.icon;
-
-    date.value = sixthDay.data.forecast.forecastday[0].date;
-    week.value = sixthDay.data.forecast.forecastday;
+    date.value = futureDay.data.forecast.forecastday[0].date;
+    week.value = futureDay.data.forecast.forecastday;
     maxTemp.value = firstDay.data.forecast.forecastday[0].day.maxtemp_c;
     minTemp.value = firstDay.data.forecast.forecastday[0].day.mintemp_c;
   } catch (error) {
@@ -160,20 +165,30 @@ onMounted(async () => {
   align-items: center;
   width: 100%;
   height: 100%;
-  margin-top: 60px;
   padding: 20px;
 }
 
 .weather-card {
   width: 600px;
   height: 400px;
-  background: radial-gradient(ellipse at 15% 20%, #7f1bd7 0%, #6622cc 25%, #3141b1 50%, #3f7998 75%, #4b8178 100%) 75% 50%/110% 150%;
+  background-image: url("https://images.unsplash.com/photo-1559963110-71b394e7494d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=675&q=80");
   border-radius: 15px;
   box-shadow: 0 0 8px -1px #262626;
   display: flex;
   justify-content: space-around;
   align-items: initial;
   flex-direction: column;
+}
+
+.card-gradient {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-image: var(--gradient);
+  border-radius: 15px;
+  opacity: 0.8;
 }
 
 .date-container {
@@ -203,30 +218,32 @@ onMounted(async () => {
   display: inline-block;
   width: auto;
   margin-right: 2px;
-  height: 0.8em;
+  height: 24px;
 }
-
 
 .info-container {
   display: flex;
   align-items: center;
   justify-content: space-around;
+  text-align: center;
   margin-bottom: 15px;
+}
+
+.icon-weather svg {
+  width: 130px;
+  height: 130px;
+}
+
+.desc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .weather-info {
   display: flex;
   flex-direction: column;
-}
-
-.water {
-  display: flex;
-  align-items: center;
-}
-
-.icon {
-  height: 100px;
-  width: auto;
 }
 
 .deg {
@@ -236,9 +253,19 @@ onMounted(async () => {
   font-weight: 900;
 }
 
-.deg svg {
-  width: 50px;
-  height: 50px;
+.max-temp {
+  display: flex;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 15px;
+}
+
+.min-temp {
+  display: flex;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 15px;
+  margin-top: 5px;
 }
 
 .text {
@@ -250,30 +277,36 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin-top: 5px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 15px;
 }
 
 .water svg {
-  margin-right: 5px;
+  height: 40px;
 }
 
 .wind {
   display: flex;
   align-items: center;
   margin-top: 5px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 15px;
 }
 
 .wind svg {
-  margin-right: 5px;
+  height: 40px;
 }
 
 .compass {
   display: flex;
   align-items: center;
   margin-top: 5px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 15px;
 }
 
 .compass svg {
-  margin-right: 5px;
+  height: 40px;
 }
 
 .week-container {
@@ -296,6 +329,11 @@ onMounted(async () => {
   flex-direction: column;
 }
 
+.week-day svg {
+  width: 60px;
+  height: 60px;
+}
+
 .loader {
   display: flex;
   flex-direction: column;
@@ -304,7 +342,7 @@ onMounted(async () => {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: radial-gradient(ellipse at 15% 20%, #7f1bd7 0%, #6622cc 25%, #3141b1 50%, #3f7998 75%, #4b8178 100%) 75% 50%/110% 150%;
+  background: var(--gradient);
   border-radius: 15px;
   z-index: 9999;
 }
